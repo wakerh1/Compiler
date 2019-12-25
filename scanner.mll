@@ -1,6 +1,8 @@
-{open Parser}
+(* Ocamllex scanner for MicroC *)
 
-rule token =parse
+{ open Parser }
+
+rule token = parse
   [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
 | "/*"     { comment lexbuf }           (* Comments *)
 | '('      { LPAREN }
