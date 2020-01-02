@@ -89,7 +89,7 @@ rule Token = parse
   | ';'             { SEMI }
   | ','             { COMMA }
   | ':'             { COLON }
-//   | '?'             { QSTMARK }
+  | '?'             { QSTMARK }
   | "//"            { EndLineComment lexbuf; Token lexbuf }
   | "/*"            { Comment lexbuf; Token lexbuf }
   | '"'             { CSTSTRING (String [] lexbuf) }

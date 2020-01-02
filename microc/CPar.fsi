@@ -13,6 +13,7 @@ type token =
   | ASSIGN
   | AMP
   | COLON
+  | QSTMARK
   | PLUSASSIGN
   | MINUSASSIGN
   | TIMESASSIGN
@@ -65,6 +66,7 @@ type tokenId =
     | TOKEN_ASSIGN
     | TOKEN_AMP
     | TOKEN_COLON
+    | TOKEN_QSTMARK
     | TOKEN_PLUSASSIGN
     | TOKEN_MINUSASSIGN
     | TOKEN_TIMESASSIGN

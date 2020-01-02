@@ -30,7 +30,7 @@ and expr =
   | Andalso of expr * expr           (* Sequential and              *)
   | Orelse of expr * expr            (* Sequential or               *)
   | Call of string * expr list       (* Function call f(...)        *)
-  // | ThreeMu of expr * expr *expr     (* a?b:c 三目运算               *)
+  | ThreeMu of expr * expr *expr     (* a?b:c 三目运算               *)
                                                                    
 and access =                                                       
   | AccVar of string                 (* Variable access        x    *) 
