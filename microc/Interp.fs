@@ -211,14 +211,7 @@ let rec exec stmt (locEnv : locEnv) (gloEnv : gloEnv) (store : store) : store =
       // _ 表示丢弃e的值,返回 变更后的环境store1 
       let (_, store1) = eval e locEnv gloEnv store 
       store1 
-    | For(e, estart, estop , body) ->                    
-      let (v, store1) = eval e locEnv gloEnv store
-      let rec loop store1 =
-              let (v, store2) = eval estart locEnv gloEnv store1
-              if v<>0 then loop (snd (eval estop locEnv gloEnv (exec body locEnv gloEnv store2)))
-                      else store2
-      loop store1
-      
+
     | Block stmts -> 
 
         // 语句块 解释辅助函数 loop
@@ -231,7 +224,32 @@ let rec exec stmt (locEnv : locEnv) (gloEnv : gloEnv) (store : store) : store =
       
       loop stmts (locEnv, store) 
     | Return _ -> failwith "return not implemented"
-    
+    | For(e1, e2, e3, body) ->                    
+      let (v, store1) = eval e1 locEnv gloEnv store
+      let rec loop store1 =
+              let (v, store2) = eval e2 locEnv gloEnv store1
+              if v<>0 then loop (snd (eval e3 locEnv gloEnv (exec body locEnv gloEnv store2)))
+                      else store2
+      loop store1
+    // | Break _ -> failwith "break"     放弃
+    | Switch(e1, caseList) -> 
+      let (v1, store1) = eval e1 locEnv gloEnv store
+      let rec loop caseList1 = 
+              match caseList1 with
+              | [] -> store
+              | case :: caseList2 -> let (v2, store2) = eval (fst case) locEnv gloEnv store1
+                                     if v1<>v2 then loop caseList2
+                                               else exec (snd case) locEnv gloEnv store2
+      loop caseList
+    | SwitchDefault(e1, caseList, def) -> 
+      let (v1, store1) = eval e1 locEnv gloEnv store
+      let rec loop caseList1 = 
+              match caseList1 with
+              | [] -> exec def locEnv gloEnv store1
+              | case :: caseList2 -> let (v2, store2) = eval (fst case) locEnv gloEnv store1
+                                     if v1<>v2 then loop caseList2
+                                               else exec (snd case) locEnv gloEnv store2
+      loop caseList
 
 and stmtordec stmtordec locEnv gloEnv store = 
     match stmtordec with 
@@ -252,28 +270,34 @@ and eval e locEnv gloEnv store : int * store =
                         (getSto store1 loc, store1) 
     | Assign(acc, e) -> let (loc, store1) = access acc locEnv gloEnv store
                         let (res, store2) = eval e locEnv gloEnv store1
-                        (res, setSto store2 loc res)
-    | PlusAssign(acc, e) -> //+=部分
-      let (loc , store1 ) = access acc locEnv gloEnv store
+                        (res, setSto store2 loc res) 
+
+    | PlusAssign(acc, e) ->
+      let (loc, store1) = access acc locEnv gloEnv store
       let tmp = getSto store1 loc
       let (res, store2) = eval e locEnv gloEnv store1
       (tmp + res, setSto store2 loc (tmp+res))
-    | MinusAssign(acc, e) -> //-=部分
-      let (loc , store1) = access acc locEnv gloEnv store
+    | MinusAssign(acc, e) ->
+      let (loc, store1) = access acc locEnv gloEnv store
       let tmp = getSto store1 loc
       let (res, store2) = eval e locEnv gloEnv store1
       (tmp - res, setSto store2 loc (tmp-res))
-    | DivAssign(acc, e) -> //  /=部分
-      let (loc , store1) = access acc locEnv gloEnv store
+    | TimesAssign(acc, e) ->
+      let (loc, store1) = access acc locEnv gloEnv store
       let tmp = getSto store1 loc
       let (res, store2) = eval e locEnv gloEnv store1
-      (tmp / res, setSto store2 loc (tmp/res))
-    | TimesAssign(acc , e) -> 
-      // *=部分
-      let (loc , store1) = access acc locEnv gloEnv store
+      (tmp * res, setSto store2 loc (tmp * res))
+    | DivAssign(acc, e) ->
+      let (loc, store1) = access acc locEnv gloEnv store
       let tmp = getSto store1 loc
       let (res, store2) = eval e locEnv gloEnv store1
-      (tmp * res, setSto store2 loc (tmp*res))
+      (tmp / res, setSto store2 loc (tmp / res))
+    | ModAssign(acc, e) ->
+      let (loc, store1) = access acc locEnv gloEnv store
+      let tmp = getSto store1 loc
+      let (res, store2) = eval e locEnv gloEnv store1
+      (tmp % res, setSto store2 loc (tmp%res))
+
     | CstI i         -> (i, store)
     | Addr acc       -> access acc locEnv gloEnv store
     | Prim1(ope, e1) ->
@@ -303,6 +327,11 @@ and eval e locEnv gloEnv store : int * store =
           | ">"  -> if i1 >  i2 then 1 else 0
           | _    -> failwith ("unknown primitive " + ope)
       (res, store2) 
+    | ThreeMu(e1 , e2 , e3) ->
+      let (v, store1 )  = eval e1 locEnv gloEnv store
+      if v<>0 then eval e2 locEnv gloEnv store1
+              else eval e3 locEnv gloEnv store1
+
     | Andalso(e1, e2) -> 
       let (i1, store1) as res = eval e1 locEnv gloEnv store
       if i1<>0 then eval e2 locEnv gloEnv store1 else res
