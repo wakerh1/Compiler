@@ -133,6 +133,32 @@ let rec cStmt stmt (varEnv : VarEnv) (funEnv : FunEnv) : instr list =
       let labtest  = newLabel()
       [GOTO labtest; Label labbegin] @ cStmt body varEnv funEnv
       @ [Label labtest] @ cExpr e varEnv funEnv @ [IFNZRO labbegin]
+      //FOR 循环
+    | For(e1, eStart, eStop, body) -> 
+      let labbegin = newLabel()
+      let labtest = newLabel()
+
+      cExpr e1 varEnv funEnv @ [INCSP -1]
+      @ [GOTO labtest;Label labbegin] @ cStmt body varEnv funEnv
+      @ cExpr eStop varEnv funEnv @ [INCSP -1]
+      @ [Label labtest] @ cExpr eStart varEnv funEnv @ [IFNZRO labbegin]
+
+    //Switch
+    | Switch(e1, caseList) -> 
+      let rec loop caseList1 lableend=
+          match caseList1 with 
+          | []     -> ([],[])
+          | case :: caseList2 ->
+          let labbegin = newLabel()
+          let labtest  = newLabel() 
+          let result=[GOTO labtest; Label labbegin] @ cStmt (snd case) varEnv funEnv @[GOTO lableend]@ [Label labtest] @cExpr e1 varEnv funEnv @ cExpr (fst case) varEnv funEnv@[EQ] @ [IFNZRO labbegin]
+          let (fdepthr,code)=loop caseList2 lableend
+          ([], result@code)
+
+      let lableend = newLabel()
+      let (fdepthend, code) = loop caseList lableend
+      code @[Label lableend]
+
     | Expr e -> 
       cExpr e varEnv funEnv @ [INCSP -1]
     | Block stmts -> 
@@ -179,6 +205,11 @@ and cExpr (e : expr) (varEnv : VarEnv) (funEnv : FunEnv) : instr list =
     | Assign(acc, e) -> cAccess acc varEnv funEnv @ cExpr e varEnv funEnv @ [STI]
     | CstI i         -> [CSTI i]
     | Addr acc       -> cAccess acc varEnv funEnv
+    | PlusAssign(acc, e) -> cAccess acc varEnv funEnv @ [DUP] @ [LDI] @ cExpr e varEnv funEnv @ [ADD] @ [STI]
+    | MinusAssign(acc, e) ->cAccess acc varEnv funEnv @ [DUP] @ [LDI] @ cExpr e varEnv funEnv @ [SUB] @ [STI]
+    | TimesAssign(acc, e) ->cAccess acc varEnv funEnv @ [DUP] @ [LDI] @ cExpr e varEnv funEnv @ [MUL] @ [STI]
+    | DivAssign(acc, e) ->cAccess acc varEnv funEnv @ [DUP] @ [LDI] @ cExpr e varEnv funEnv @ [DIV] @ [STI]
+    | ModAssign(acc, e) ->cAccess acc varEnv funEnv @ [DUP] @ [LDI] @ cExpr e varEnv funEnv @ [MOD] @ [STI]
     | Prim1(ope, e1) ->
       cExpr e1 varEnv funEnv
       @ (match ope with
